@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 
+
 from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin
 
 
@@ -86,6 +87,9 @@ class FamilyAgeImputer(BaseEstimator, TransformerMixin):
         self.possible_husband_titles = ['Mr', 'Don', 'Sir'] + neutral_titles
         self.possible_wife_titles = ['Mrs', 'Countess', 'Lady', 'Mme'] + neutral_titles
 
+        numerical = []
+        ordinal = []
+        categorical = ['Title_grouped', 'Pclass', 'FamilySize_grouped']
 
         self.base_imputation_method = base_imputation_method
 
@@ -164,6 +168,7 @@ class FamilyAgeImputer(BaseEstimator, TransformerMixin):
         return age
 
     def get_age_from_family(self, row, family, default_age):
+        surname = row['Surname']
         partner = create_nan_dataframe_row(family.columns)
         age_estimates = []
 

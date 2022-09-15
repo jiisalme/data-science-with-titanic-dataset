@@ -59,11 +59,22 @@ def show_results(best_pipeline, search, X_train, y_train, X_test, y_test, visual
         visualize_metrics(best_pipeline, X_test, y_test)
 
 
-def save_pipeline(estimator, file_path):
-    os.path.join('./models', 'pipeline.joblib')
-    dump(estimator, file_path)
-    print(f'Pipeline saved to {file_path}!')
-
+def save_best_model(X_test, y_test, estimator, estimator_name):
+    accuracy = estimator.score(X_test, y_test)
+    y_pred = estimator.predict(X_test)
+    predict_proba = estimator.predict_proba(X_test)
+    logloss = log_loss(y_test, predict_proba)
+    precision, recall, fscore, _ = precision_recall_fscore_support(y_test, y_pred, pos_label=1,
+                                                                   average='binary')
+    best_results = pd.read_csv(os.path.join('./results', 'top_test_set_result.csv')).set_index('estimator')
+    if best_results.iloc[-1]['accuracy'] < accuracy:
+        best_results.loc[estimator_name, ['accuracy', 'log_loss',
+                                          'precision', 'recall']] = (accuracy, logloss, precision, recall)
+        best_results.loc[estimator_name:, :].to_csv(os.path.join('./results', 'top_test_set_result.csv'))
+        dump(estimator, os.path.join('./models', 'best_estimator.joblib'))
+        print('New best estimator saved!')
+    else:
+        print('This was not the best estimator.')
 
 
 def get_failed_predictions(estimator, X, y):
@@ -79,10 +90,9 @@ def show_slice_results(estimator, X, y, groupby_cols):
     data.loc[failed_data.index, 'Failure'] = 1
 
     groups = data.groupby(groupby_cols)
-    def mean_poscount_count(x):
-        return np.round(pd.Series.mean(x), 2), pd.Series.mean(x)*pd.Series.count(x), pd.Series.count(x)
-
-    results = groups[['Survived', 'Predictions', 'Failure']].agg(mean_poscount_count)
+    results = groups[['Survived', 'Predictions', 'Failure']].agg(lambda x: (np.round(pd.Series.mean(x), 2),
+                                                                            pd.Series.mean(x)*pd.Series.count(x),
+                                                                            pd.Series.count(x)))
 
     display(results)
 
@@ -91,10 +101,10 @@ def show_group_predictions(estimator, X, groupby_cols):
     y_pred = estimator.predict(X)
     data['Predictions'] = y_pred
     groups = data.groupby(groupby_cols)
-    def mean_poscount_count(x):
-        return np.round(pd.Series.mean(x), 2), pd.Series.mean(x)*pd.Series.count(x), pd.Series.count(x)
 
-    results = groups[['Predictions']].agg(mean_poscount_count)
+    results = groups[['Predictions']].agg(lambda x: (np.round(pd.Series.mean(x), 2),
+                                                     pd.Series.mean(x) * pd.Series.count(x),
+                                                     pd.Series.count(x)))
 
     display(results)
 
